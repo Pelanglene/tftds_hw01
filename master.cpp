@@ -14,12 +14,12 @@
 #include <future>
 #include <queue>
 #include <algorithm>
+#include <fcntl.h>
 
 
 #define MAX_SERVERS 10
 #define DISCOVER_PORT 12345
 #define TASK_PORT 12346
-#define MAX_RETRIES 3
 #define TIMEOUT_SEC 2
 
 struct Task {
@@ -159,11 +159,45 @@ double process_task(Server& server, const Task& task) {
     struct sockaddr_in taskAddr = server.addr;
     taskAddr.sin_port = htons(TASK_PORT);
 
-    if (connect(sock, reinterpret_cast<struct sockaddr*>(&taskAddr), sizeof(taskAddr)) < 0) {
+    int flags = fcntl(sock, F_GETFL, 0);
+    fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+
+    int conn_result = connect(sock, reinterpret_cast<struct sockaddr*>(&taskAddr), sizeof(taskAddr));
+
+    if (conn_result < 0 && errno != EINPROGRESS) {
         server.active = false;
         close(sock);
         throw std::runtime_error("Ошибка подключения");
     }
+
+    fd_set set;
+    FD_ZERO(&set);
+    FD_SET(sock, &set);
+
+    conn_result = select(sock + 1, NULL, &set, NULL, &tv);
+
+    if (conn_result <= 0) {
+        server.active = false;
+        close(sock);
+        throw std::runtime_error("Ошибка подключения");
+    }
+
+    int so_error;
+    socklen_t len = sizeof(so_error);
+    getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
+    if (so_error != 0) {
+        server.active = false;
+        close(sock);
+        throw std::runtime_error("Ошибка подключения");
+    }
+
+    fcntl(sock, F_SETFL, flags);
+
+    // if (connect(sock, reinterpret_cast<struct sockaddr*>(&taskAddr), sizeof(taskAddr)) < 0) {
+    //     server.active = false;
+    //     close(sock);
+    //     throw std::runtime_error("Ошибка подключения");
+    // }
 
     if (send(sock, &task, sizeof(Task), 0) < 0) {
         server.active = false;
