@@ -1,0 +1,42 @@
+version: '3'
+services:
+  master:
+    build: .
+    command: ./master 0 50 0.001
+    networks:
+      - integration_network
+    depends_on:
+      - worker1
+      - worker2
+      - worker3
+      - worker4
+
+  worker1:
+    build: .
+    command: ./worker
+    networks:
+      - integration_network
+
+  worker2:
+    build: .
+    command: ./worker
+    networks:
+      - integration_network
+    privileged: true
+
+  worker3:
+    build: .
+    command: ./worker
+    networks:
+      - integration_network
+  
+  worker4:
+    build: .
+    command: ./worker
+    networks:
+      - integration_network
+
+
+networks:
+  integration_network:
+    driver: bridge 

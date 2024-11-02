@@ -1,0 +1,4 @@
+/home/pelanglene/tftds/hw01/build/CMakeFiles/master.dir
+/home/pelanglene/tftds/hw01/build/CMakeFiles/worker.dir
+/home/pelanglene/tftds/hw01/build/CMakeFiles/edit_cache.dir
+/home/pelanglene/tftds/hw01/build/CMakeFiles/rebuild_cache.dir
